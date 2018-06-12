@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://xmlns.jcp.org/jsf/html"
+	xmlns:f="http://xmlns.jcp.org/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+
+<ui:composition template="_template.xhtml">
+	<f:metadata>
+		<f:viewParam name="livroId" value="#{livroBean.livroId}" />
+		<f:viewAction action="#{livroBean.carregaLivroPorId}" if="#{param.livroId != null}" />
+	</f:metadata>
+	<ui:define name="titulo">
+		<p:outputPanel>Novo Livro</p:outputPanel>
+	</ui:define>
+	<ui:define name="conteudo">
+		<h:form id="formLivro">
+			<h:messages id="mensagem"/>
+			
+			<!-- Dados do Livro -->
+			
+			<p:fieldset legend="Dados do Livro">
+				<p:panelGrid columns="2">
+					<p:outputLabel value="Titulo:" for="titulo" />
+					<p:inputText id="titulo" value="#{livroBean.livro.titulo}"
+						required="true" requiredMessage="Título obrigatório"
+						validatorMessage="Título não pode ser superior a 40">
+						<f:validateLength maximum="40" />
+						<f:ajax event="blur" render="mensagem" />
+					</p:inputText>
+					
+					<p:outputLabel value="Gênero:" for="genero" />
+					<p:selectOneMenu id="genero" value="#{livroBean.livro.genero}">
+						<f:selectItem itemLabel="Selecione..." itemValue="#{null}" noSelectionOption="true"/>
+						<f:selectItems value="#{livroBean.generos}" />
+					</p:selectOneMenu>
+
+					<p:outputLabel value="ISBN:" for="isbn" />
+					<p:inputMask id="isbn" value="#{livroBean.livro.isbn}" validator="#{livroBean.comecaComDigitoUm}"
+							mask="999-9-99-999999-9">
+						<f:ajax event="blur" render="mensagem" />
+					</p:inputMask>
+
+					<p:outputLabel value="Preço:" for="preco" />
+					<p:inputNumber id="preco" value="#{livroBean.livro.preco}" symbol="R$ " required="true" requiredMessage="O campo preço é obrigatório." 
+						decimalSeparator="," thousandSeparator="." validatorMessage="O campo preço deve conter um valor entre R$1,00 e R$1.000,00">  
+	                    <f:validateDoubleRange minimum="1.00" maximum="1000.00" />
+	                </p:inputNumber>
+
+					<p:outputLabel value="Data de Lançamento:" for="dataLancamento" />
+					<p:calendar id="dataLancamento" value="#{livroBean.livro.dataLancamento.time}" required="true" 
+						requiredMessage="O campo Data de Lançamento é obrigatório" pattern="dd/MM/yyyy" mask="true">
+					</p:calendar>
+				</p:panelGrid>
+			</p:fieldset>
+			<br/>
+			
+			<!-- Dados do Autor -->
+			
+			<p:fieldset legend="Dados do Autor">
+				<p:panelGrid columns="4">
+					<p:outputLabel value="Selecione Autor:" for="autor" />
+					<p:selectOneMenu id="autor" value="#{livroBean.autorId}" >
+						<f:selectItems value="#{livroBean.autores}" var="autor"
+							itemLabel="#{autor.nome}" itemValue="#{autor.id}" />
+					</p:selectOneMenu>
+					<p:commandButton value="Gravar Autor" action="#{livroBean.gravarAutor}"
+						process="@this autor" update="tabelaAutores">
+					</p:commandButton>
+					<p:commandLink value="ou cadastrar novo autor"
+						action="#{livroBean.formAutor}" immediate="true" update="@all" />
+				</p:panelGrid>
+				<p:dataTable id="tabelaAutores" value="#{livroBean.autoresDoLivro}" var="autor" emptyMessage="Nenhum autor(a) selectionado(a).">
+					<p:column>
+						<p:commandLink value="X" action="#{livroBean.removerAutorDoLivro(autor)}" 
+								styleClass="ui-icon ui-icon-close" style="float:left;margin-right:10px" process="@this" update="tabelaAutores" />
+						<p:outputLabel value="#{autor.nome}" />
+					</p:column>
+				</p:dataTable>
+			</p:fieldset>
+			<br />
+			<p:commandButton value="Gravar" action="#{livroBean.gravar}"
+				process="@form" update="@form :formTabelaLivros">
+			</p:commandButton>
+		</h:form>
+		<br />
+		
+		<!-- DataTable Livros -->
+
+		<h:form id="formTabelaLivros">
+			<p:dataTable id="tabelaLivros" value="#{livroBean.livroDataModel}" widgetVar="tabelaLivros" var="livro" emptyMessage="Nenhum livro cadastrado."
+				paginator="true" rows="5" lazy="true">
+				
+				<f:facet name="header">Livros</f:facet>
+				
+				<p:column headerText="Título" sortBy="#{livro.titulo}" filterBy="#{livro.titulo}" filterMatchMode="startsWith">
+					<p:outputLabel value="#{livro.titulo}" />
+				</p:column>
+				
+				<p:column headerText="Gênero" sortBy="#{livroBean.genero}" filterBy="#{livroBean.genero}" filterMatchMode="startsWith">
+					<f:facet name="filter">
+						<p:selectOneMenu onchange="PF('tabelaLivros').filter()">
+							<f:selectItem itemLabel="Selecione..." itemValue="#{null}"
+								noSelectionOption="true" />
+							<f:selectItems value="#{livroBean.generos}" />
+						</p:selectOneMenu>
+					</f:facet>
+					<p:outputLabel value="#{livro.genero}"/>
+				</p:column>
+
+				<p:column headerText="ISBN" sortBy="#{livro.isbn}" filterBy="#{livro.isbn}" filterMatchMode="contains">
+					<p:outputLabel value="#{livro.isbn}" />
+				</p:column>
+
+				<p:column headerText="Preço" sortBy="#{livro.preco}" filterBy="#{livro.preco}" filterFunction="#{livroBean.precoEhMenor}">
+					<p:outputLabel value="#{livro.preco}">
+						<f:convertNumber type="currency" pattern="R$ #0.00"
+							currencySymbol="R$" locale="pt_BR" />
+					</p:outputLabel>
+				</p:column>
+				<p:column headerText="Data Lançamento" sortBy="#{livro.dataLancamento.time}" filterBy="#{livro.dataLancamento.time}" filterMatchMode="contains">
+					<p:outputLabel value="#{livro.dataLancamento.time}">
+						<f:convertDateTime pattern="dd/MM/yyyy" timeZone="America/Bahia"/>
+					</p:outputLabel>
+				</p:column>
+				<p:column headerText="Ação">
+					<p:commandLink action="#{livroBean.carregar(livro)}" styleClass="ui-icon ui-icon-pencil" style="float:left;margin-right:10px"
+						process="@this" update=":formLivro" />
+					<p:commandLink value="remove" action="#{livroBean.remover(livro)}" styleClass="ui-icon ui-icon-trash" style="float:left;margin-right:10px"
+						process="@this" update=":formTabelaLivros" />
+				</p:column>
+			</p:dataTable>
+		</h:form>
+	</ui:define>
+</ui:composition>
+</html>
